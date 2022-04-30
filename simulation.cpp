@@ -31,6 +31,7 @@ int main(int argc, char** argv) {
         break;
     case 'v':
         vflag = 1;
+        printf("TRACE\n");
         break;
     case 'q':
         qflag = 1;
@@ -64,9 +65,12 @@ int main(int argc, char** argv) {
     input.open(argv[optind]);
     list<IORequest*> reqlist;
     unsigned int at, tr;
+    unsigned int opnum = 0;
     while(get_next_request(input, &at, &tr))
-        reqlist.push_back(new IORequest(at, tr));
+        reqlist.push_back(new IORequest(opnum++, at, tr));
     input.close();
+
+    vector<IORequest*> finishedlist(opnum);
 
     // sanity check passing
     // int i = 0;
@@ -74,6 +78,91 @@ int main(int argc, char** argv) {
     //     cout << "Requst #" << i++ << ": " << req->getAT() << ' ' << req->getTR() << endl;
 
     Scheduler* sched;
+    switch (sched_algo)
+    {
+    case 'i':
+        sched = new FIFOSched();
+        break;
+    
+    default:
+        printf("Scheduler algo %c not supported\n", sched_algo);
+        exit(EXIT_FAILURE);
+    }
+
+    unsigned int sim_time = 0;
+    unsigned int disk_head = 0;
+    int direction = 0; // 0: no movement 1: right -1: left
+    IORequest* curr_io = nullptr;
+
+    // stats
+    unsigned int tot_movement = 0, tot_waittime = 0, max_waittime = 0, tot_turnaround;
+
+    while(true) {        
+        // cout << "sim time " << sim_time << " disk head " << disk_head << " tr ";
+        // if(curr_io) cout << curr_io->getTR();
+        // else cout << "N/A";
+        // cout << endl;
+
+        // if a new io request arrived at this time
+        if(!reqlist.empty() && reqlist.front()->getAT() == sim_time) {
+            IORequest* new_req = reqlist.front();
+            sched->add_io(new_req);
+            if(vflag) printf("%u: %5u add %u\n", sim_time, new_req->getOpNum(), new_req->getTR());
+            reqlist.pop_front();
+        }
+        // if an active IO finished at this time
+        if(curr_io != nullptr && disk_head == curr_io->getTR()) {
+            // compute relevant info and store
+            curr_io->setEndTIme(sim_time);
+            if(vflag) printf("%u: %5u finish %d\n", sim_time, curr_io->getOpNum(), sim_time - curr_io->getAT());
+            finishedlist[curr_io->getOpNum()] = curr_io;
+            tot_movement += curr_io->getEndTime() - curr_io->getStartTime();
+            curr_io = nullptr;
+            direction = 0;
+        }
+        // if no request is active at this time
+        if(curr_io == nullptr) {
+            if(sched->has_more_io()) {
+                // TODO: initialize accounting variables
+                curr_io = sched->get_next_io();
+                curr_io->setStartTime(sim_time);
+                while(curr_io && curr_io->getTR() == disk_head) {
+                    if(vflag) printf("%u: %5u issue %u %u\n", sim_time, curr_io->getOpNum(), curr_io->getTR(), disk_head);
+                    curr_io->setEndTIme(sim_time);
+                    if(vflag) printf("%u: %5u finish %d\n", sim_time, curr_io->getOpNum(), sim_time - curr_io->getAT());
+                    finishedlist[curr_io->getOpNum()] = curr_io;
+                    curr_io = nullptr;
+                    if(sched->has_more_io()) {
+                        curr_io = sched->get_next_io();
+                    }
+                }
+                if(vflag && curr_io) printf("%u: %5u issue %u %u\n", sim_time, curr_io->getOpNum(), curr_io->getTR(), disk_head);
+                if(curr_io) direction = curr_io->getTR() > disk_head ? 1 : -1;
+            }
+            else if(reqlist.empty()) {
+                // TODO: exit, print final info etc
+                break;
+            }
+        }
+        // if there is an ongoing request
+        disk_head += direction ? (direction / abs(direction)) : 0;
+
+        sim_time++;
+    }
+
+    opnum = 0;
+    for(auto r : finishedlist) {
+        printf("%5d: %5d %5d %5d\n", opnum++, r->getAT(), r->getStartTime(), r->getEndTime());
+        int curr_waittime = r->getStartTime() - r->getAT();
+        tot_waittime += curr_waittime;
+        tot_turnaround += r->getEndTime() - r->getAT();
+        if(curr_waittime > max_waittime) max_waittime = curr_waittime;
+    }
+
+    float avg_turnaround = (float) tot_turnaround / opnum;
+    float avg_waittime = (float) tot_waittime / opnum;
+
+    printf("SUM: %u %u %.2lf %.2lf %u\n", sim_time, tot_movement, avg_turnaround, avg_waittime, max_waittime);
 
     return EXIT_SUCCESS;
 }
