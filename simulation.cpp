@@ -11,7 +11,7 @@
 
 using namespace std;
 
-int disk_head;
+int disk_head, direction;
 unsigned int vflag = 0, fflag = 0, qflag = 0;
 
 int main(int argc, char** argv) {
@@ -89,6 +89,10 @@ int main(int argc, char** argv) {
     case 'j':
         sched = new SSTFSched();
         break;
+
+    case 's':
+        sched = new LOOKSched();
+        break;
     
     default:
         printf("Scheduler algo %c not supported\n", sched_algo);
@@ -97,7 +101,7 @@ int main(int argc, char** argv) {
 
     unsigned int sim_time = 0;
     disk_head = 0;
-    int direction = 0; // 0: no movement 1: right -1: left
+    direction = 0; // 0: no movement 1: right -1: left
     IORequest* curr_io = nullptr;
 
     // stats
@@ -124,7 +128,6 @@ int main(int argc, char** argv) {
             finishedlist[curr_io->getOpNum()] = curr_io;
             tot_movement += curr_io->getEndTime() - curr_io->getStartTime();
             curr_io = nullptr;
-            direction = 0;
         }
         // if no request is active at this time
         if(curr_io == nullptr) {
@@ -151,6 +154,9 @@ int main(int argc, char** argv) {
             else if(reqlist.empty()) {
                 // TODO: exit, print final info etc
                 break;
+            }
+            else {
+                direction = 0;
             }
         }
         // if there is an ongoing request
