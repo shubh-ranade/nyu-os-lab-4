@@ -91,7 +91,11 @@ int main(int argc, char** argv) {
         break;
 
     case 's':
-        sched = new LOOKSched();
+        sched = new LOOKSched(false);
+        break;
+    
+    case 'c':
+        sched = new LOOKSched(true);
         break;
     
     default:

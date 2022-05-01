@@ -35,8 +35,9 @@ public:
 class LOOKSched : public Scheduler {
 private:
     std::list<IORequest*> q;
+    bool cflag;
 public:
-    LOOKSched() = default;
+    LOOKSched(bool c);
     bool has_more_io();
     IORequest* get_next_io();
     void add_io(IORequest*);
