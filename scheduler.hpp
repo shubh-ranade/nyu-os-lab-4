@@ -43,4 +43,14 @@ public:
     void add_io(IORequest*);
 };
 
+class FLOOKSched : public Scheduler {
+private:
+    std::list<IORequest*> activeq, addq;
+public:
+    FLOOKSched() = default;
+    bool has_more_io();
+    IORequest* get_next_io();
+    void add_io(IORequest*);
+};
+
 #endif

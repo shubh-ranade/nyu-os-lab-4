@@ -117,10 +117,55 @@ IORequest* LOOKSched::get_next_io() {
 
     if(cflag && ret && ret == *leftmost_tr) q.erase(leftmost_tr);
     else if(cflag && ret && ret == *right_min) q.erase(right_min);
-    
+
     return ret;
 }
 
 void LOOKSched::add_io(IORequest* r) {
     q.push_back(r);
+}
+
+bool FLOOKSched::has_more_io() {
+    return !activeq.empty() || !addq.empty();
+}
+
+void FLOOKSched::add_io(IORequest* r) {
+    addq.push_back(r);
+}
+
+IORequest* FLOOKSched::get_next_io() {
+    if(activeq.empty()) activeq.swap(addq);
+
+    IORequest* ret = nullptr;
+    if(activeq.empty()) return ret;
+
+    int global_min_seek_time = __INT32_MAX__, same_dir_min_seek_time = __INT32_MAX__;
+    list<IORequest*>::iterator global_min = activeq.end(), same_dir_min = activeq.end();
+
+    for(auto it = activeq.begin(); it != activeq.end(); it++) {
+        IORequest* req = *it;
+        int seek_time = req->getTR() - disk_head;
+        
+        if(seek_time == 0) {
+            ret = req;
+            activeq.erase(it);
+            return ret;
+        }
+        if(seek_time * direction > 0 && abs(seek_time) < same_dir_min_seek_time) {
+            same_dir_min_seek_time = abs(seek_time);
+            same_dir_min = it;
+        }
+        if(abs(seek_time) < global_min_seek_time) {
+            global_min_seek_time = abs(seek_time);
+            global_min = it;
+        }
+    }
+
+    if(global_min != activeq.end()) ret = *global_min;
+    if(same_dir_min != activeq.end()) ret = *same_dir_min;
+    
+    if(ret && ret == *global_min) activeq.erase(global_min);
+    else if(ret && ret == *same_dir_min) activeq.erase(same_dir_min);
+
+    return ret;
 }

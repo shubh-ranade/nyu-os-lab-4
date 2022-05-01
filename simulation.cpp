@@ -97,6 +97,10 @@ int main(int argc, char** argv) {
     case 'c':
         sched = new LOOKSched(true);
         break;
+
+    case 'f':
+        sched = new FLOOKSched();
+        break;
     
     default:
         printf("Scheduler algo %c not supported\n", sched_algo);
