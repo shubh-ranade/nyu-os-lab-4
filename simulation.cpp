@@ -169,11 +169,11 @@ int main(int argc, char** argv) {
             }
         }
         // if there is an ongoing request
-        // disk_head += direction ? (direction / abs(direction)) : 0;
-        if(curr_io) {
-            if(direction > 0) disk_head++;
-            else if(direction < 0) disk_head--;
-        }
+        disk_head += curr_io && direction ? (direction / abs(direction)) : 0;
+        // if(curr_io) {
+        //     if(direction > 0) disk_head++;
+        //     else if(direction < 0) disk_head--;
+        // }
 
         sim_time++;
     }
