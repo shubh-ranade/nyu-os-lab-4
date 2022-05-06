@@ -113,7 +113,8 @@ int main(int argc, char** argv) {
     IORequest* curr_io = nullptr;
 
     // stats
-    int tot_movement = 0, tot_waittime = 0, max_waittime = 0, tot_turnaround = 0;
+    unsigned int tot_movement = 0, max_waittime = 0;
+    double tot_waittime = 0.0, tot_turnaround = 0.0;
 
     while(true) {        
         // cout << "sim time " << sim_time << " disk head " << disk_head << " tr ";
@@ -134,7 +135,7 @@ int main(int argc, char** argv) {
             curr_io->setEndTIme(sim_time);
             if(vflag) printf("%u: %5u finish %d\n", sim_time, curr_io->getOpNum(), sim_time - curr_io->getAT());
             finishedlist[curr_io->getOpNum()] = curr_io;
-            tot_movement += curr_io->getEndTime() - curr_io->getStartTime();
+            tot_movement += (int) curr_io->getEndTime() - (int) curr_io->getStartTime();
             curr_io = nullptr;
         }
         // if no request is active at this time
@@ -176,9 +177,9 @@ int main(int argc, char** argv) {
     opnum = 0;
     for(auto r : finishedlist) {
         printf("%5d: %5d %5d %5d\n", opnum++, r->getAT(), r->getStartTime(), r->getEndTime());
-        int curr_waittime = r->getStartTime() - r->getAT();
+        double curr_waittime = (int) r->getStartTime() - (int) r->getAT();
         tot_waittime += curr_waittime;
-        tot_turnaround += r->getEndTime() - r->getAT();
+        tot_turnaround += (int) r->getEndTime() - (int) r->getAT();
         if(curr_waittime > max_waittime) max_waittime = curr_waittime;
     }
 
